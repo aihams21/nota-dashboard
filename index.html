@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NO-TA · الأجهزة</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0B1020;color:#F6F4FF;min-height:100vh;direction:rtl}
+  .bg-orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
+  .orb1{width:340px;height:340px;background:rgba(114,87,255,0.18);top:-100px;right:-80px}
+  .orb2{width:280px;height:280px;background:rgba(56,217,197,0.12);bottom:10%;left:-60px}
+  .orb3{width:200px;height:200px;background:rgba(255,95,143,0.10);bottom:-40px;right:20%}
+  .wrap{position:relative;z-index:1;max-width:700px;margin:0 auto;padding:24px 16px 60px}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+  .brand{font-size:28px;font-weight:900;letter-spacing:-1px}
+  .brand span{color:#38D9C5}
+  .status-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(23,33,58,0.8);border:1px solid rgba(246,244,255,0.12);border-radius:99px;padding:6px 14px;font-size:12px;font-weight:700;color:#9CA8C7}
+  .status-pill .dot{width:8px;height:8px;border-radius:50%}
+  .dot-on{background:#38D9C5;box-shadow:0 0 8px rgba(56,217,197,0.6)}
+  .dot-off{background:#FF5F8F;box-shadow:0 0 8px rgba(255,95,143,0.5)}
+  .summary{display:flex;gap:12px;margin-bottom:24px}
+  .stat{flex:1;background:rgba(23,33,58,0.7);border:1px solid rgba(246,244,255,0.10);border-radius:18px;padding:16px;text-align:center}
+  .stat-num{font-size:32px;font-weight:900;color:#38D9C5}
+  .stat-label{font-size:11px;color:#9CA8C7;margin-top:4px;font-weight:700}
+  .cards{display:flex;flex-direction:column;gap:12px}
+  .card{background:rgba(23,33,58,0.75);border:1px solid rgba(246,244,255,0.10);border-radius:20px;padding:18px;display:flex;align-items:center;gap:14px;transition:border-color .3s}
+  .card.online{border-color:rgba(56,217,197,0.35)}
+  .card.offline{border-color:rgba(255,95,143,0.25);opacity:0.75}
+  .card-icon{width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+  .card.online .card-icon{background:rgba(56,217,197,0.15)}
+  .card.offline .card-icon{background:rgba(255,95,143,0.12)}
+  .card-info{flex:1;min-width:0}
+  .card-name{font-size:15px;font-weight:900;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card-meta{font-size:11px;color:#9CA8C7;font-weight:600}
+  .card-status{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+  .card-status .dot{width:12px;height:12px;border-radius:50%}
+  .card-status span{font-size:10px;font-weight:800}
+  .card.online .card-status span{color:#38D9C5}
+  .card.offline .card-status span{color:#FF5F8F}
+  .empty{text-align:center;padding:60px 20px;color:#9CA8C7}
+  .empty .icon{font-size:48px;margin-bottom:12px}
+  .empty h3{color:#F6F4FF;font-size:18px;font-weight:900;margin-bottom:6px}
+  .refresh-info{text-align:center;color:#9CA8C7;font-size:10px;margin-top:18px;font-weight:600}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .pulse{animation:pulse 2s ease-in-out infinite}
+</style>
+</head>
+<body>
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+<div class="bg-orb orb3"></div>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">NO-TA<span>.</span></div>
+    <div class="status-pill"><div class="dot dot-on pulse"></div>لوحة المراقبة</div>
+  </div>
+  <div class="summary" id="summary"></div>
+  <div class="cards" id="cards"></div>
+  <div class="refresh-info">تحديث تلقائي كل 5 ثوانٍ</div>
+</div>
+<script src="config.js"></script>
+<script>
+const OS_ICONS = {android:'📱',ios:'🍎',web:'🌐',windows:'💻',macos:'🖥️',linux:'🐧',unknown:'📡'};
+function timeAgo(ts){
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60) return 'الآن';
+  if(s<3600) return Math.floor(s/60)+' دقيقة';
+  if(s<86400) return Math.floor(s/3600)+' ساعة';
+  return Math.floor(s/86400)+' يوم';
+}
+const API = (window.NOTA_SERVER || '').replace(/\/$/,'') + '/api/devices';
+async function refresh(){
+  try{
+    const res=await fetch(API);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const list=data.devices||[];
+    const online=list.filter(d=>d.online).length;
+    const offline=list.length-online;
+    document.getElementById('summary').innerHTML=
+      '<div class="stat"><div class="stat-num">'+list.length+'</div><div class="stat-label">إجمالي الأجهزة</div></div>'+
+      '<div class="stat"><div class="stat-num" style="color:#38D9C5">'+online+'</div><div class="stat-label">متصل</div></div>'+
+      '<div class="stat"><div class="stat-num" style="color:#FF5F8F">'+offline+'</div><div class="stat-label">فاصل</div></div>';
+    if(!list.length){
+      document.getElementById('cards').innerHTML='<div class="empty"><div class="icon">📱</div><h3>لا توجد أجهزة بعد</h3><p>افتح تطبيق NO-TA على جهازك وسيظهر هنا تلقائياً.</p></div>';
+      return;
+    }
+    document.getElementById('cards').innerHTML=list.map(d=>{
+      const icon=OS_ICONS[d.os]||OS_ICONS.unknown;
+      const cls=d.online?'online':'offline';
+      const statusText=d.online?'متصل':'النت فاصل';
+      return '<div class="card '+cls+'">'+
+        '<div class="card-icon">'+icon+'</div>'+
+        '<div class="card-info">'+
+          '<div class="card-name">'+esc(d.name)+'</div>'+
+          '<div class="card-meta">'+esc(d.model)+' · '+esc(d.os)+'</div>'+
+          '<div class="card-meta">آخر ظهور: '+timeAgo(d.lastSeen)+'</div>'+
+        '</div>'+
+        '<div class="card-status"><div class="dot '+(d.online?'dot-on':'dot-off')+'"></div><span>'+statusText+'</span></div>'+
+      '</div>';
+    }).join('');
+  }catch(e){
+    document.getElementById('summary').innerHTML='<div class="empty"><div class="icon">⚠️</div><h3>الخادم غير متاح</h3><p>شغّل اللابتوب والخادم ثم حدّث هذه الصفحة.</p></div>';
+  }
+}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+refresh();
+setInterval(refresh,5000);
+</script>
+</body>
+</html>
