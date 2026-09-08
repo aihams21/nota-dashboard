@@ -1,2 +1,2 @@
 // عنوان خادم NO-TA — يتم تحديثه تلقائياً عند كل تشغيل
-window.NOTA_SERVER = "https://2c8157c31df782.lhr.life";
+window.NOTA_SERVER = "https://30cd14099e3609.lhr.life";
